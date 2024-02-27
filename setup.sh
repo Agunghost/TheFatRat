@@ -1,99 +1,5 @@
 #!/bin/bash
 #Instalation of searchsploit (exploitdb)
-function optmingw () {
-case $sel in
-y|Y|yes|YES|Yes)
-echo -n "Removing mingw as requested..."	
-xterm -T "☣ REMOVING MINGW ☣" -geometry 100x30 -e "apt remove --purge *mingw* -y && apt autoremove -y"
-which x86_64-w64-mingw32-gcc >> /dev/null 2>&1
-if [ "$?" != "0" ]; then
-echo "Done"
-else
-echo "Error"
-echo ""
-echo "Setup was unable to remove mingw Installation"
-fi
-;;
-n|N|No|NO)
-echo "Setup will not remove current mingw installation"
-echo "However you will encounter issues running Fudwin"
-echo -n "in fatrat menu , press ENTER to resume setup"
-read -rsp var	
-;;
-esac	
-}	
-rchk () {
-apt-get update &> /tmp/aptkey.log 
-awk '{print $1}' RS='NO_PUBKEY' /tmp/aptkey.log | sed '1d' > /tmp/expkeys.log
-awk '{print $1}' RS='EXPKEYSIG' /tmp/aptkey.log | sed '1d' >> /tmp/expkeys.log
-sort /tmp/expkeys.log | uniq > /tmp/expkeystmp.log
-rm /tmp/expkeys.log && mv /tmp/expkeystmp.log /tmp/expkeys.log
-cntk=$(wc -l /tmp/expkeys.log | awk '{print$1}' | sed 's/ //g')
-if [[ "$cntk" == "0" ]]
-then
-echo "[ Done ]"
-else
-echo "[ Error ]"
-echo "Unable to process key for $dist"
-echo ""
-fi
-}	
-
-function repokey () {
-echo -ne "$green" "[ ? ] Update Jessie/Kali Repo Public Key"
-apt-get update &> /tmp/aptkey.log 
-awk '{print $1}' RS='NO_PUBKEY' /tmp/aptkey.log | sed '1d' > /tmp/expkeys.log
-awk '{print $1}' RS='EXPKEYSIG' /tmp/aptkey.log | sed '1d' >> /tmp/expkeys.log
-cat /tmp/expkeys.log | sort | uniq > /tmp/expkeystmp.log
-rm /tmp/expkeys.log && mv /tmp/expkeystmp.log /tmp/expkeys.log
-cntk=$(wc -l /tmp/expkeys.log | awk '{print$1}' | sed 's/ //g')
-if [[ "$cntk" == "0" ]]
-then
-echo "[ Done ]"
-fi
-for i in $(seq $cntk)
-do
-gtkey=$(sed -n ${i}p /tmp/expkeys.log)
-xterm -T "☣ CHECK PUBKEY ☣" -geometry 100x30 -e "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $gtkey &> /tmp/gtkey.log" 
-kout=$(grep -w "Total number processed:" /tmp/gtkey.log  | awk -F'Total number processed:' '{print $2}' | sed 's/ //g')
-dist=$(grep -o '".*"' /tmp/gtkey.log | sed 's/"//g')
-if [[ "$kout" == "1" ]]
-then
-echo "[ Done ]"
-echo "Succefull Key processed for $dist" 
-else
-rchk
-fi
-done
-
-}
-function mingwchk () {
-echo -ne "$green" "[ ? ] Checking Mingw Version............"	
-which x86_64-w64-mingw32-gcc >> /dev/null 2>&1
-if [ "$?" -eq "0" ]; then
-chkvs=$(x86_64-w64-mingw32-gcc --version | sed -n 1p | awk '{print$3}')
-case $chkvs in
-4.9.1)
-echo "[✔]"
-;;
-6.3.0)
-echo "[✔]"
-;;
-*)
-echo "Error"
-echo ""
-echo "TheFatRat detected an incorrent version of mingw installed"
-echo "Do you wish to remove it and install the approriate one ?"
-echo -n "Choose (yes/no) : "
-read -r sel
-optmingw 
-;;
-esac
-else
-echo "Not Installed"
-fi
-}	
-
 function ssplt() {
 
 # check if searchsploit exists
@@ -453,7 +359,7 @@ echo "0" > "$stp"
 echo "xterm -> Not OK" > "$inst"
 fi
 fi
-mingwchk
+
 sleep 1
 #check if dig its installed
 which dig > /dev/null 2>&1
@@ -607,34 +513,13 @@ echo "0" > "$stp"
 echo "ruby -> Not OK" >> "$inst"
 fi
 fi
-sleep 1
-#Checking if python2 exists
-which python2 > /dev/null 2>&1
-if [ "$?" -eq "0" ]; then
-echo -e "$green" "[ ✔ ] Python2...........................[ found ]"
-which python2 >> "$log" 2>&1
-echo "Python2 -> OK" >> "$inst"
-else
-echo -e "$red" "[ X ] Python2  -> not found "
-echo -e "$yellow" "[ ! ] Installing Python2 "
-xterm -T "☣ INSTALL Python2 ☣" -geometry 100x30 -e "sudo apt install python2-minimal -y"
-which python2 >> "$log" 2>&1
-if [ "$?" -eq "0" ]; then
-echo -e "$green" "[ ✔ ] Python2 -> OK"
-echo "Python2 -> OK" >> "$inst"
-else
-echo -e "$red" "[ x ] Python2"
-echo "0" > "$stp"
-echo "Python2 -> Not OK" >> "$inst"
-fi
-fi
 
 sleep 1
 #Checking if python3 exists
 which python3 > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 echo -e "$green" "[ ✔ ] Python3...........................[ found ]"
-which python3 >> "$log" 2>&1
+which ruby >> "$log" 2>&1
 echo "Python3 -> OK" >> "$inst"
 else
 echo -e "$red" "[ X ] Python3  -> not found "
@@ -696,7 +581,7 @@ fi
 sleep 1
 #installing dependencies for ruby script 
 echo -e "$green" "[ ! ] Installing tools dependencies"
-xterm -T "☣ INSTALL DEPENDENCIES ☣" -geometry 100x30 -e "sudo apt-get install lib32z1 lib32ncurses5 lib32stdc++6 build-essential -y"
+xterm -T "☣ INSTALL DEPENDENCIES ☣" -geometry 100x30 -e "sudo apt-get install lib32z1 lib32ncurses5 lib32stdc++6 python-pip python-dev build-essential -y && pip install names"
 sleep 1
 
 #Checking if Jarsigner exists
@@ -823,7 +708,6 @@ fi
 rm -f /etc/apt/sources.list
 touch /etc/apt/sources.list
 echo "deb http://deb.debian.org/debian/ jessie main contrib non-free" > /etc/apt/sources.list
-repokey
 xterm -T "☣ UPDATING REPOSITORIES DEDIAN JESSIE☣" -geometry 100x30 -e "sudo apt-get clean && sudo apt-get clean cache && sudo apt-get update -y | tee -a $mingw"
 sleep 1
 
@@ -840,10 +724,10 @@ echo -e "$red" "[ X ] Mingw-w64 -> not found "
 #Powerstager requires mingw64 to work , mingw32 is required because powerfull.sh requires it for 32bit fud exe compiling
 # In case mingw64 not found then remove any previously mingw32 & 64 bit faulty instalations and install mingw64 
 
-xterm -T "☣ INSTALL MINGW64 COMPILLER ☣" -geometry 100x30 -e "sudo apt-get install mingw32 mingw-w64 -y | tee -a $mingw"
+xterm -T "☣ INSTALL MINGW64 COMPILLER ☣" -geometry 100x30 -e "sudo apt-get install *mingw* -y | tee -a $mingw"
 which x86_64-w64-mingw32-gcc > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
-echo -e "$green" "[ ✔ ] Mingw-64 Compiler.................[ found ]"
+echo -e "$green" "[ ✔ ] Mingw-64 Compiler..................[ found ]"
 which x86_64-w64-mingw32-gcc >> "$log" 2>&1
 echo "Mingw64 -> OK" >> "$inst"
 else
@@ -884,16 +768,16 @@ if [ "$?" -eq "0" ]; then
 dxg=$(dx --version 2>&1 | tee temp/dx)
 dxv=$(grep "version" < temp/dx | awk '{print $3}') 
 case "$dxv" in
-1.16)
-#DX exists and it is version 1.16
+1.12)
+#DX exists and it is version 1.12
 rm -rf temp/dx >/dev/null 2>&1
 which dx >> "$log" 2>&1
 echo "dx" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] DX 1.16...........................[ found ]"
+echo -e "$green" "[ ✔ ] DX 1.12...........................[ found ]"
 echo "DX -> OK" >> "$inst"
 ;;
 *)
-#DX does not exists or is not 1.16 version
+#DX does not exists or is not 1.12 version
 xterm -T "☣ Removing Your Current DX ☣" -geometry 100x30 -e "sudo apt-get remove --purge dx -y"
 unlink "/usr/local/sbin/dx" > /dev/null 2>&1
 ln -s "$path/tools/android-sdk/dx" "/usr/local/sbin/dx" > /dev/null 2>&1
@@ -901,10 +785,10 @@ which dx > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 which dx >> "$log" 2>&1
 echo "dx" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] DX 1.16...........................[Installed]"
+echo -e "$green" "[ ✔ ] DX 1.12...........................[Installed]"
 echo "DX -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] DX 1.16"
+echo -e "$red" "[ x ] DX 1.12"
 echo "0" > "$stp"
 echo "dx -> Not OK" >> "$inst"
 fi
@@ -917,10 +801,10 @@ which dx > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 which dx >> "$log" 2>&1
 echo "dx" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] DX 1.16...........................[Installed]"
+echo -e "$green" "[ ✔ ] DX 1.12...........................[Installed]"
 echo "DX -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] DX 1.16"
+echo -e "$red" "[ x ] DX 1.12"
 echo "0" > "$stp"
 echo "dx -> Not OK" >> "$inst"
 fi
@@ -932,32 +816,27 @@ which aapt > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 aptv=`aapt v | awk '{print $5}'`
 case "$aptv" in
-v0.2-6625208)
-#exists and it is v0.2-6625208
+v0.2-3544217)
+#exists and it is v0.2-3544217
 which aapt >> "$log" 2>&1
 echo "aapt" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] Aapt v0.2-6625208.................[ found ]"
+echo -e "$green" "[ ✔ ] Aapt v0.2-3544217.................[ found ]"
 echo "Aapt -> OK" >> "$inst"
-rm /usr/local/sbin/aapt2 >/dev/null 2>&1
-ln -s "$path/tools/android-sdk/aapt2" "/usr/local/sbin/aapt2" > /dev/null 2>&1
 ;;
 *)
 #Aapt does not exists or is not the latest version used in fatrat (android sdk)
 xterm -T "☣ Removing Your Current Aapt ☣" -geometry 100x30 -e "sudo apt-get remove --purge aapt -y"
 unlink "/usr/local/sbin/aapt" > /dev/null 2>&1
-unlink "/usr/local/sbin/aapt2" > /dev/null 2>&1
 rm /usr/local/sbin/aapt >/dev/null 2>&1
-rm /usr/local/sbin/aapt2 >/dev/null 2>&1
 ln -s "$path/tools/android-sdk/aapt" "/usr/local/sbin/aapt" > /dev/null 2>&1
-ln -s "$path/tools/android-sdk/aapt2" "/usr/local/sbin/aapt2" > /dev/null 2>&1
 which aapt > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 which aapt >> "$log" 2>&1
 echo "aapt" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] Aapt v0.2-6625208..................[Installed]"
+echo -e "$green" "[ ✔ ] Aapt v0.2-3544217..................[Installed]"
 echo "Aapt -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] Aapt v0.2-6625208"
+echo -e "$red" "[ x ] Aapt v0.2-3544217"
 echo "0" > "$stp"
 echo "aapt -> Not OK" >> "$inst"
 fi
@@ -965,45 +844,43 @@ fi
 esac
 else
 unlink "/usr/local/sbin/aapt" > /dev/null 2>&1
-unlink "/usr/local/sbin/aapt2" > /dev/null 2>&1
 ln -s "$path/tools/android-sdk/aapt" "/usr/local/sbin/aapt" > /dev/null 2>&1
-ln -s "$path/tools/android-sdk/aapt2" "/usr/local/sbin/aapt2" > /dev/null 2>&1
 which aapt > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 which aapt >> "$log" 2>&1
 echo "aapt" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] Aapt v0.2-6625208.................[Installed]"
+echo -e "$green" "[ ✔ ] Aapt v0.2-3544217.................[Installed]"
 echo "Aapt -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] Aapt v0.2-6625208"
+echo -e "$red" "[ x ] Aapt v0.2-3544217"
 echo "0" > "$stp"
 echo "aapt -> Not OK" >> "$inst"
 fi
 fi
 sleep 1
-#Same procedure used for dx and aapt , but for apktool 2.6.0.
+#Same procedure used for dx and aapt , but for apktool 2.4.0.
 which apktool > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 apk=`apktool | sed -n 1p | awk '{print $2}'` > /dev/null 2>&1
 case "$apk" in 
-v.2.6.0)
+v.2.4.1)
 which apktool >> "$log" 2>&1
 echo "apktool" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] Apktool v.2.6.0..................[ found ]"
+echo -e "$green" "[ ✔ ] Apktool v.2.4.1..................[ found ]"
 echo "Apktool -> OK" >> "$inst"
 ;;
 *)
 xterm -T "☣ REMOVE OLD APKTOOL ☣" -geometry 100x30 -e "sudo apt-get remove --purge apktool -y"
 unlink "/usr/local/sbin/apktool" > /dev/null 2>&1
-ln -s "$path/tools/apktool/apktool" "/usr/local/sbin/apktool" > /dev/null 2>&1
+ln -s "$path/tools/apktool2.4.1/apktool" "/usr/local/sbin/apktool" > /dev/null 2>&1
 which apktool > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
-echo -e "$green" "[ ✔ ] Apktool v.2.6.0...................[Installed]"
+echo -e "$green" "[ ✔ ] Apktool v.2.4.1...................[Installed]"
 which apktool >> "$log" 2>&1
 echo "apktool" | tee -a "$config" >> /dev/null 2>&1
 echo "Apktool -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] Apktool v.2.6.0"
+echo -e "$red" "[ x ] Apktool v.2.4.1"
 echo "0" > "$stp"
 echo "apktool -> Not OK" >> "$inst"
 fi
@@ -1011,15 +888,15 @@ fi
 esac
 else
 unlink "/usr/local/sbin/apktool" > /dev/null 2>&1
-ln -s "$path/tools/apktool/apktool" "/usr/local/sbin/apktool" > /dev/null 2>&1
+ln -s "$path/tools/apktool2.4.1/apktool" "/usr/local/sbin/apktool" > /dev/null 2>&1
 which apktool > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
 which apktool >> "$log" 2>&1
 echo "apktool" | tee -a "$config" >> /dev/null 2>&1
-echo -e "$green" "[ ✔ ] Apktool v.2.6.0...................[Installed]"
+echo -e "$green" "[ ✔ ] Apktool v.2.4.1...................[Installed]"
 echo "Apktool -> OK" >> "$inst"
 else
-echo -e "$red" "[ x ] Apktool v.2.6.0"
+echo -e "$red" "[ x ] Apktool v.2.4.1"
 echo "0" > "$stp"
 echo "apktool -> Not OK" >> "$inst"
 fi
@@ -1072,7 +949,6 @@ fi
 rm -f /etc/apt/sources.list
 touch /etc/apt/sources.list
 echo "deb https://http.kali.org/kali kali-rolling main non-free contrib" > /etc/apt/sources.list
-repokey
 xterm -T "☣ UPDATING KALI REPOSITORIES ☣" -geometry 100x30 -e "sudo apt-get clean && sudo apt-get clean cache && sudo apt-get update"
 sleep 1
 mtspl
@@ -1357,7 +1233,7 @@ chmod +x tools/android-sdk/zipalign
 chmod +x tools/baksmali233/baksmali
 chmod +x tools/android-sdk/dx
 chmod +x tools/android-sdk/aapt
-chmod +x tools/apktool/apktool
+chmod +x tools/apktool2.4.1/apktool
 chmod +x tools/android-string-obfuscator/lib/aso
 chmod +x tools/pump.py
 chmod +x tools/pw_exec.py
@@ -1409,26 +1285,10 @@ exit 0
 ;;
 esac
 echo -e "$green" "Checking type of shell ...."
+echo -e "$blue" "No Worries SSH will do the Job this is FatRat VPS ... thank OttomanZ"
 sleep 1
 
-#Check if user is using a remote shell or a local terminal
-if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
-  echo "[remote]"
-echo ""
-    echo -e "$red" "Fatrat & Setup does not work over a remote secure shell ."
-    echo ""
-echo -e "$green" "If you want to Install Fatrat on a remote computer then "
-echo -e "$green" "use a remote desktop connection like rdesktop or vnc) "
-echo ""
-echo -e "$green" "Press [ENTER] key to exit"
-read -r abor
-exit 1
-else
-echo "[local]"
-  case $(ps -o comm= -p $PPID) in
-    sshd|*/sshd) SESSION_TYPE=remote/ssh;;
-  esac
-fi
+# Removed the check if it is o
 sleep 1
 which nc > /dev/null 2>&1
 if [ "$?" -eq "0" ]; then
